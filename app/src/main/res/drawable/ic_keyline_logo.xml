@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="1000"
+    android:viewportHeight="1000">
+
+    <!-- Exact 1:1 Vector Recreation of Keyline Logo -->
+    <!-- Pure Solid Background: White (#FFFFFF) handled by container/frame -->
+
+    <!-- LEFT HALF: Vibrant Safety Orange (#FF6B00) -->
+    <!-- 1. Shield Left Outline -->
+    <path
+        android:fillColor="#FF6B00"
+        android:pathData="M 500,58 L 174,195 Q 126,216 126,266 L 126,448 Q 126,494 164,534 L 500,936 L 500,824 L 236,508 Q 206,474 206,438 L 206,300 Q 206,266 238,252 L 500,154 Z" />
+
+    <!-- 2. Key Left Half -->
+    <path
+        android:fillColor="#FF6B00"
+        android:pathData="M 500,194 A 168,168 0 0,0 435,517 L 435,758 L 500,808 L 500,458 A 96,96 0 0,1 500,266 L 500,194 Z" />
+
+    <!-- RIGHT HALF: Deep Solid Charcoal / Dark Navy (#2B303A) -->
+    <!-- 3. Shield Right Outline -->
+    <path
+        android:fillColor="#2B303A"
+        android:pathData="M 500,58 L 826,195 Q 874,216 874,266 L 874,448 Q 874,494 836,534 L 500,936 L 500,824 L 764,508 Q 794,474 794,438 L 794,300 Q 794,266 762,252 L 500,154 Z" />
+
+    <!-- 4. Key Right Half (with exactly two teeth extending right) -->
+    <path
+        android:fillColor="#2B303A"
+        android:pathData="M 500,194 A 168,168 0 0,1 565,517 L 565,560 L 624,560 Q 632,560 632,568 L 632,618 Q 632,626 624,626 L 565,626 L 565,664 L 616,664 Q 624,664 624,672 L 624,718 Q 624,726 616,726 L 565,726 L 565,758 L 500,808 L 500,458 A 96,96 0 0,0 500,266 L 500,194 Z" />
+</vector>

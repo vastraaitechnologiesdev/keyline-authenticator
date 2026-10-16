@@ -1,0 +1,52 @@
+# Built application files
+*.apk
+*.aab
+*.ap_
+*.aab.idsig
+*.apk.idsig
+
+# Gradle cache and workspace directories
+.gradle/
+build/
+app/build/
+.kotlin/
+
+# Local configuration & environment secrets
+local.properties
+.env
+.env.local
+
+# Keystores, signing keys, and private property files
+*.jks
+*.keystore
+*.bak
+key.properties
+keystore.properties
+debug.keystore
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+.idea_modules/
+*.ipr
+*.iws
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# VS Code & Antigravity IDE
+.vscode/
+.antigravity/
+
+# Native build artifacts
+.externalNativeBuild/
+.cxx/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Output and profiling captures
+/captures/

@@ -1,7 +1,8 @@
 # Keyline Authenticator
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/01265cf3-d458-49a7-ab6d-2d5417027708" width="110" height="110" alt="Keyline Authenticator Icon" />
+  <img src="https://github.com/user-attachments/assets/01265cf3-d458-49a7-ab6d-2d5417027708" width="160" height="160" alt="Keyline Authenticator Icon" />
 </p>
+
 
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)

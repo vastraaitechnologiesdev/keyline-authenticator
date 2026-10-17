@@ -18,7 +18,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 
-class EncryptedAccountRepository(context: Context) {
+class SecureVaultInitializationException(
+  message: String,
+  cause: Throwable? = null
+) : SecurityException(message, cause)
+
+class EncryptedAccountRepository(
+  context: Context,
+  customPrefs: SharedPreferences? = null
+) {
 
   private val _isStrongBoxBacked = MutableStateFlow(checkStrongBoxSupport(context))
   val isStrongBoxBacked: StateFlow<Boolean> = _isStrongBoxBacked.asStateFlow()
@@ -26,7 +34,7 @@ class EncryptedAccountRepository(context: Context) {
   @Volatile
   private var isLoadedSuccessfully: Boolean = false
 
-  private val encryptedPrefs: SharedPreferences = initEncryptedPrefs(context)
+  private val encryptedPrefs: SharedPreferences = customPrefs ?: initEncryptedPrefs(context)
 
   private val _accountsFlow = MutableStateFlow<List<OtpAccount>>(emptyList())
   val accountsFlow: Flow<List<OtpAccount>> = _accountsFlow.asStateFlow()
@@ -42,64 +50,50 @@ class EncryptedAccountRepository(context: Context) {
    * Crucially ensures:
    * 1. The KeyStore key is NEVER deleted or overwritten on ordinary launches.
    * 2. Preserves data from any legacy vaults previously created under custom StrongBox/TEE aliases.
-   * 3. Prevents startup crashes by gracefully recovering or falling back if OEM KeyStore throws KeyStoreException, SecurityException, or GeneralSecurityException.
+   * 3. Prevents plaintext storage: If hardware KeyStore fails, throws SecureVaultInitializationException.
    */
   private fun initEncryptedPrefs(context: Context): SharedPreferences {
     return try {
       initEncryptedPrefsInternal(context)
+    } catch (e: SecureVaultInitializationException) {
+      throw e
     } catch (e: KeyStoreException) {
-      safeFallbackPrefs(context)
+      throw SecureVaultInitializationException("KeyStore hardware error during vault initialization: ${e.message}", e)
     } catch (e: SecurityException) {
-      safeFallbackPrefs(context)
+      throw SecureVaultInitializationException("Security error during vault initialization: ${e.message}", e)
+    } catch (e: GeneralSecurityException) {
+      throw SecureVaultInitializationException("Cryptographic error during vault initialization: ${e.message}", e)
     } catch (e: Exception) {
-      safeFallbackPrefs(context)
-    } catch (_: Throwable) {
-      safeFallbackPrefs(context)
-    }
-  }
-
-  private fun safeFallbackPrefs(context: Context): SharedPreferences {
-    return try {
-      context.getSharedPreferences(FALLBACK_PREFS_NAME, Context.MODE_PRIVATE)
-    } catch (_: Throwable) {
-      context.getSharedPreferences("keyline_memory_prefs", Context.MODE_PRIVATE)
+      throw SecureVaultInitializationException("Unexpected error during vault initialization: ${e.message}", e)
+    } catch (t: Throwable) {
+      throw SecureVaultInitializationException("Fatal error during vault initialization: ${t.message}", t)
     }
   }
 
   private fun initEncryptedPrefsInternal(context: Context): SharedPreferences {
     val masterKey = getOrCreatePersistentMasterKey(context)
+      ?: throw SecureVaultInitializationException(
+        "Android KeyStore MasterKey creation failed. Plaintext fallback is strictly disabled for security."
+      )
 
-    if (masterKey != null) {
-      // Primary attempt: Open standard encrypted vault with persistent MasterKey
-      try {
-        val prefs = EncryptedSharedPreferences.create(
-          context,
-          PREFS_NAME,
-          masterKey,
-          EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-          EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-        // If successful, check if legacy StrongBox or TEE accounts need migration
-        migrateLegacyVaultIfNeeded(context, prefs)
-        return prefs
-      } catch (e: KeyStoreException) {
-        return recoverOrFallback(context, masterKey)
-      } catch (e: SecurityException) {
-        return recoverOrFallback(context, masterKey)
-      } catch (e: GeneralSecurityException) {
-        return recoverOrFallback(context, masterKey)
-      } catch (e: Exception) {
-        return recoverOrFallback(context, masterKey)
-      } catch (_: Throwable) {
-        return recoverOrFallback(context, masterKey)
-      }
+    // Primary attempt: Open standard encrypted vault with persistent MasterKey
+    try {
+      val prefs = EncryptedSharedPreferences.create(
+        context,
+        PREFS_NAME,
+        masterKey,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+      )
+      // If successful, check if legacy StrongBox or TEE accounts need migration
+      migrateLegacyVaultIfNeeded(context, prefs)
+      return prefs
+    } catch (_: Throwable) {
+      return recoverOrThrow(context, masterKey)
     }
-
-    // Isolated safe fallback (used for environments lacking working KeyStore)
-    return safeFallbackPrefs(context)
   }
 
-  private fun recoverOrFallback(context: Context, masterKey: MasterKey): SharedPreferences {
+  private fun recoverOrThrow(context: Context, masterKey: MasterKey): SharedPreferences {
     // Recovery attempt 1: Recover accounts from legacy keys if available
     try {
       val recoveredAccounts = recoverFromLegacyKeys(context)
@@ -128,11 +122,17 @@ class EncryptedAccountRepository(context: Context) {
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
           )
         }
-      } catch (_: Throwable) {
-        // Handled by final fallback below
+      } catch (recoveryErr: Throwable) {
+        throw SecureVaultInitializationException(
+          "Hardware KeyStore recovery failed. Encrypted storage is unavailable.",
+          recoveryErr
+        )
       }
     }
-    return safeFallbackPrefs(context)
+
+    throw SecureVaultInitializationException(
+      "Hardware KeyStore encryption failed. Plaintext fallback is strictly disabled for security."
+    )
   }
 
   /**
@@ -435,7 +435,6 @@ class EncryptedAccountRepository(context: Context) {
   companion object {
     private const val PREFS_NAME = "keyline_encrypted_vault"
     private const val PERSISTENT_VAULT_NAME = "keyline_persistent_vault"
-    private const val FALLBACK_PREFS_NAME = "keyline_fallback_vault"
     private const val KEY_ACCOUNTS = "encrypted_otp_accounts"
 
     /**

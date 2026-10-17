@@ -43,12 +43,23 @@ data class AccountUiItem(
   val isCodeHidden: Boolean = false
 )
 
-class AuthenticatorViewModel(application: Application) : AndroidViewModel(application) {
+class AuthenticatorViewModel @JvmOverloads constructor(
+  application: Application,
+  customRepository: EncryptedAccountRepository? = null
+) : AndroidViewModel(application) {
 
-  private val repository = EncryptedAccountRepository(application.applicationContext)
+  private val _vaultInitError = MutableStateFlow<String?>(null)
+  val vaultInitError: StateFlow<String?> = _vaultInitError.asStateFlow()
+
+  private val repository: EncryptedAccountRepository? = customRepository ?: try {
+    EncryptedAccountRepository(application.applicationContext)
+  } catch (e: Exception) {
+    _vaultInitError.value = e.message ?: "Secure vault initialization failed"
+    null
+  }
   val preferencesManager = PreferencesManager(application.applicationContext)
 
-  val isStrongBoxBacked: StateFlow<Boolean> = repository.isStrongBoxBacked
+  val isStrongBoxBacked: StateFlow<Boolean> = repository?.isStrongBoxBacked ?: MutableStateFlow(false)
 
   private val _securityCheckResult = MutableStateFlow(RootDetectionHelper.checkEnvironment())
   val securityCheckResult: StateFlow<SecurityCheckResult> = _securityCheckResult.asStateFlow()
@@ -104,7 +115,7 @@ class AuthenticatorViewModel(application: Application) : AndroidViewModel(applic
 
   init {
     viewModelScope.launch {
-      repository.accountsFlow.collectLatest { accounts ->
+      repository?.accountsFlow?.collectLatest { accounts ->
         _rawAccounts.value = accounts
         updateUiState()
       }
@@ -259,7 +270,7 @@ class AuthenticatorViewModel(application: Application) : AndroidViewModel(applic
   }
 
   fun restoreAccounts(accounts: List<OtpAccount>): Pair<Int, Int> {
-    return repository.bulkImportAccounts(accounts)
+    return repository?.bulkImportAccounts(accounts) ?: Pair(0, 0)
   }
 
   fun exportSelectedAccounts(selectedIds: Set<String>): Result<String> {
@@ -278,7 +289,7 @@ class AuthenticatorViewModel(application: Application) : AndroidViewModel(applic
     }
 
     val accounts = parseResult.getOrThrow()
-    val counts = repository.bulkImportAccounts(accounts)
+    val counts = repository?.bulkImportAccounts(accounts) ?: Pair(0, 0)
     return Result.success(counts)
   }
 
@@ -310,8 +321,8 @@ class AuthenticatorViewModel(application: Application) : AndroidViewModel(applic
       counter = 0L
     )
 
-    val success = repository.addAccount(account)
-    return if (success) Result.success(Unit) else Result.failure(Exception("Failed to save account"))
+    val success = repository?.addAccount(account) ?: false
+    return if (success) Result.success(Unit) else Result.failure(Exception(_vaultInitError.value ?: "Failed to save account: Secure storage unavailable"))
   }
 
   fun addAccountFromQr(qrContent: String): Result<OtpAccount> {
@@ -321,11 +332,11 @@ class AuthenticatorViewModel(application: Application) : AndroidViewModel(applic
     }
 
     val account = parseResult.getOrThrow()
-    val success = repository.addAccount(account)
+    val success = repository?.addAccount(account) ?: false
     return if (success) {
       Result.success(account)
     } else {
-      Result.failure(Exception("Failed to save scanned account"))
+      Result.failure(Exception(_vaultInitError.value ?: "Failed to save scanned account: Secure storage unavailable"))
     }
   }
 
@@ -362,13 +373,13 @@ class AuthenticatorViewModel(application: Application) : AndroidViewModel(applic
     pendingDeleteJob?.cancel()
     pendingDeleteJob = null
     _pendingDeleteState.value = null
-    repository.deleteAccount(pending.account.id)
+    repository?.deleteAccount(pending.account.id)
   }
 
   private fun permanentlyDeletePendingAccount() {
     val pending = _pendingDeleteState.value ?: return
     _pendingDeleteState.value = null
-    repository.deleteAccount(pending.account.id)
+    repository?.deleteAccount(pending.account.id)
   }
 
   fun deleteAccount(id: String) {
@@ -382,7 +393,7 @@ class AuthenticatorViewModel(application: Application) : AndroidViewModel(applic
   }
 
   fun incrementHotp(id: String) {
-    repository.incrementHotpCounter(id)
+    repository?.incrementHotpCounter(id)
   }
 
   private var clipboardClearJob: Job? = null

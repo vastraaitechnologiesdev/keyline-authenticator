@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,8 +41,15 @@ import com.example.ui.theme.KeylineBlue
 import com.example.ui.theme.SlateTextPrimary
 import com.example.ui.theme.SlateTextSecondary
 
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.OutlinedButton
+import com.example.ui.theme.ExpiringRed
+import com.example.ui.theme.ExpiringRedLight
+
 @Composable
 fun VaultLockScreen(
+  errorMessage: String? = null,
+  onOpenSettings: (() -> Unit)? = null,
   onUnlockClick: () -> Unit
 ) {
   Column(
@@ -88,6 +96,59 @@ fun VaultLockScreen(
       textAlign = TextAlign.Center,
       lineHeight = 20.sp
     )
+
+    if (!errorMessage.isNullOrBlank()) {
+      Spacer(modifier = Modifier.height(20.dp))
+      Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = ExpiringRedLight,
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Column(
+          modifier = Modifier.padding(14.dp),
+          horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+          Row(
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(
+              imageVector = Icons.Default.Warning,
+              contentDescription = "Security Alert",
+              tint = ExpiringRed,
+              modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+              text = "Device Lock Required",
+              fontSize = 13.sp,
+              fontWeight = FontWeight.Bold,
+              color = ExpiringRed
+            )
+          }
+          Spacer(modifier = Modifier.height(6.dp))
+          Text(
+            text = errorMessage,
+            fontSize = 12.sp,
+            color = SlateTextPrimary,
+            textAlign = TextAlign.Center,
+            lineHeight = 16.sp
+          )
+          if (onOpenSettings != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedButton(
+              onClick = onOpenSettings,
+              shape = RoundedCornerShape(18.dp)
+            ) {
+              Text(
+                text = "Open Security Settings",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold
+              )
+            }
+          }
+        }
+      }
+    }
 
     Spacer(modifier = Modifier.height(36.dp))
 

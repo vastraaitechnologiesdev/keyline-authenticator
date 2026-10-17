@@ -181,7 +181,9 @@ class ExampleUnitTest {
   @Test
   fun testSoftDeleteWithUndoFlow() {
     val app = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.app.Application>()
-    val viewModel = com.example.viewmodel.AuthenticatorViewModel(app)
+    val testPrefs = app.getSharedPreferences("test_vault_prefs", android.content.Context.MODE_PRIVATE)
+    val testRepo = com.example.data.EncryptedAccountRepository(app, customPrefs = testPrefs)
+    val viewModel = com.example.viewmodel.AuthenticatorViewModel(app, customRepository = testRepo)
 
     val addResult = viewModel.addAccountFromQr("otpauth://totp/TestIssuer:user@test.com?secret=JBSWY3DPEHPK3PXP&issuer=TestIssuer")
     assertTrue(addResult.isSuccess)

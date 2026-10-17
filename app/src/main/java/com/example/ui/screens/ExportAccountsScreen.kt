@@ -52,6 +52,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -98,6 +99,15 @@ fun ExportAccountsScreen(
   var exportQrBitmap by remember { mutableStateOf<Bitmap?>(null) }
   var exportedCount by remember { mutableStateOf(0) }
 
+  DisposableEffect(Unit) {
+    onDispose {
+      try {
+        exportQrBitmap?.recycle()
+      } catch (_: Throwable) {}
+      exportQrBitmap = null
+    }
+  }
+
   fun triggerAuthentication() {
     if (context is FragmentActivity) {
       BiometricAuthHelper.authenticate(
@@ -113,8 +123,7 @@ fun ExportAccountsScreen(
         }
       )
     } else {
-      // Fallback
-      isAuthenticated = true
+      authErrorMessage = "Device lock or biometric authentication is required."
     }
   }
 
@@ -420,7 +429,12 @@ fun ExportAccountsScreen(
   // QR Code Display Modal Dialog
   if (exportQrBitmap != null) {
     AlertDialog(
-      onDismissRequest = { exportQrBitmap = null },
+      onDismissRequest = {
+        try {
+          exportQrBitmap?.recycle()
+        } catch (_: Throwable) {}
+        exportQrBitmap = null
+      },
       containerColor = CleanWhite,
       shape = RoundedCornerShape(24.dp),
       title = {
@@ -480,6 +494,9 @@ fun ExportAccountsScreen(
       confirmButton = {
         Button(
           onClick = {
+            try {
+              exportQrBitmap?.recycle()
+            } catch (_: Throwable) {}
             exportQrBitmap = null
             Toast.makeText(context, "Export complete", Toast.LENGTH_SHORT).show()
             onNavigateBack()

@@ -5,16 +5,16 @@
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.2-purple.svg)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-BOM%202024.09-brightgreen.svg)](https://developer.android.com/jetpack/compose)
 
-**Keyline Authenticator** is a privacy-first, offline TOTP/HOTP 2-factor authentication (2FA) app built for Android with modern Jetpack Compose. It safeguards your accounts using hardware-backed Android Keystore encryption, biometric vault locking, dynamic QR import/export, and zero-telemetry offline isolation.
+**Keyline Authenticator** is a privacy-first, offline TOTP/HOTP 2-factor authentication (2FA) app built for Android with modern Jetpack Compose. It safeguards your accounts using Hardware-backed Android KeyStore (TEE / SE) encryption, biometric vault locking, direct high-density dynamic QR migration (local air-gapped transfer), and zero-telemetry offline isolation.
 
 ---
 
 ## Features
 
 - **100% Offline & Private:** Zero network communication. Secrets never leave your device.
-- **Hardware-Backed Encryption:** Vault keys stored in the Android KeyStore using AES-256-GCM authenticated encryption.
+- **Hardware-Backed Encryption:** Vault keys stored in Hardware-backed Android KeyStore (TEE / SE) using AES-256-GCM authenticated encryption.
 - **Biometric Vault Lock:** Integrated with `androidx.biometric` (BiometricPrompt) with device credential fallback (PIN, Pattern, Password).
-- **Dynamic QR Code Transfer:** Seamless bulk migration between devices using encrypted dynamic QR payload streams.
+- **Direct High-Density Dynamic QR Migration (Local Air-Gapped Transfer):** Seamless bulk migration between devices using high-density dynamic QR payload streams without network access.
 - **Encrypted File Backups:** Password-authenticated encrypted JSON exports using PBKDF2 (100,000 iterations) and AES-256-GCM.
 - **Anti-Snooping Protection:** Strict `FLAG_SECURE` window management prevents screen recording, screenshots, and recents thumbnail leakage.
 - **Modern Jetpack Compose UI:** Material Design 3 UI with system, dark, and light themes.
@@ -105,7 +105,7 @@ export KEYLINE_RELEASE_KEY_PASSWORD=your_key_password
 - **Language:** 100% Kotlin with Coroutines & StateFlow architecture.
 - **UI Toolkit:** Jetpack Compose + Material 3.
 - **Cryptography:**
-  - `androidx.security.crypto.EncryptedSharedPreferences` backed by Android KeyStore `MasterKey` (AES256-GCM / AES256-SIV).
+  - `androidx.security.crypto.EncryptedSharedPreferences` backed by Hardware-backed Android KeyStore (TEE / SE) `MasterKey` (AES256-GCM / AES256-SIV).
   - RFC 6238 (TOTP) and RFC 4226 (HOTP) implementation with HMAC-SHA1, SHA256, and SHA512.
   - Ephemeral in-memory byte zeroing after HMAC digest generation.
 - **ProGuard / R8:** Hardened rules preserving cryptographic providers, shaded Google Tink protobuf metadata, and serialization schemas.

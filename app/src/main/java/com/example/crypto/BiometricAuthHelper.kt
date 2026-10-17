@@ -38,17 +38,7 @@ object BiometricAuthHelper {
 
       override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
         super.onAuthenticationError(errorCode, errString)
-        // If device has no hardware or biometrics setup (e.g. running in testing container/headless)
-        if (errorCode == BiometricPrompt.ERROR_NO_BIOMETRICS ||
-          errorCode == BiometricPrompt.ERROR_HW_NOT_PRESENT ||
-          errorCode == BiometricPrompt.ERROR_HW_UNAVAILABLE ||
-          errorCode == BiometricPrompt.ERROR_NO_DEVICE_CREDENTIAL
-        ) {
-          // Graceful fallback for test/emulator environments without lock screen configured
-          onSuccess()
-        } else {
-          onError(errString.toString())
-        }
+        onError(errString.toString())
       }
 
       override fun onAuthenticationFailed() {

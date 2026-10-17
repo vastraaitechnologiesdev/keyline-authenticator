@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import com.example.crypto.BiometricAuthHelper
 import com.example.crypto.QrCodeGenerator
+import com.example.crypto.TransferPayloadHelper
 import com.example.model.OtpAccount
 import com.example.model.OtpType
 import com.example.ui.theme.CleanBorder
@@ -97,6 +98,7 @@ fun ExportAccountsScreen(
 
   var selectedAccountIds by remember { mutableStateOf(accounts.map { it.id }.toSet()) }
   var exportQrBitmap by remember { mutableStateOf<Bitmap?>(null) }
+  var transferPin by remember { mutableStateOf("") }
   var exportedCount by remember { mutableStateOf(0) }
 
   DisposableEffect(Unit) {
@@ -105,6 +107,7 @@ fun ExportAccountsScreen(
         exportQrBitmap?.recycle()
       } catch (_: Throwable) {}
       exportQrBitmap = null
+      transferPin = ""
     }
   }
 
@@ -179,7 +182,9 @@ fun ExportAccountsScreen(
         ) {
           Button(
             onClick = {
-              val result = viewModel.exportSelectedAccounts(selectedAccountIds)
+              val pin = TransferPayloadHelper.generateTransferPin()
+              transferPin = pin
+              val result = viewModel.exportSelectedAccountsEncrypted(selectedAccountIds, pin)
               if (result.isSuccess) {
                 val payload = result.getOrThrow()
                 try {
@@ -434,6 +439,7 @@ fun ExportAccountsScreen(
           exportQrBitmap?.recycle()
         } catch (_: Throwable) {}
         exportQrBitmap = null
+        transferPin = ""
       },
       containerColor = CleanWhite,
       shape = RoundedCornerShape(24.dp),
@@ -450,7 +456,7 @@ fun ExportAccountsScreen(
           )
           Spacer(modifier = Modifier.height(4.dp))
           Text(
-            text = "$exportedCount ${if (exportedCount == 1) "account" else "accounts"} encoded",
+            text = "$exportedCount ${if (exportedCount == 1) "account" else "accounts"} • AES-256-GCM Encrypted",
             fontSize = 12.sp,
             color = KeylineBlue,
             fontWeight = FontWeight.Medium
@@ -464,6 +470,57 @@ fun ExportAccountsScreen(
             .verticalScroll(rememberScrollState()),
           horizontalAlignment = Alignment.CenterHorizontally
         ) {
+          if (transferPin.isNotBlank()) {
+            Surface(
+              shape = RoundedCornerShape(16.dp),
+              color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+              border = androidx.compose.foundation.BorderStroke(1.dp, KeylineBlue.copy(alpha = 0.35f)),
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp)
+            ) {
+              Column(
+                modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+              ) {
+                Row(
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = KeylineBlue,
+                    modifier = Modifier.size(15.dp)
+                  )
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(
+                    text = "ONE-TIME TRANSFER PIN",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = KeylineBlue,
+                    letterSpacing = 1.sp
+                  )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                  text = if (transferPin.length == 6) "${transferPin.substring(0, 3)}  ${transferPin.substring(3)}" else transferPin,
+                  fontSize = 28.sp,
+                  fontWeight = FontWeight.ExtraBold,
+                  color = SlateTextPrimary,
+                  letterSpacing = 4.sp
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                  text = "Type this 6-digit PIN on the receiver device to decrypt",
+                  fontSize = 11.sp,
+                  color = SlateTextSecondary,
+                  textAlign = TextAlign.Center
+                )
+              }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+          }
+
           // QR Code Frame
           Box(
             modifier = Modifier
@@ -475,7 +532,7 @@ fun ExportAccountsScreen(
           ) {
             Image(
               bitmap = exportQrBitmap!!.asImageBitmap(),
-              contentDescription = "Offline Export QR Code",
+              contentDescription = "Encrypted Export QR Code",
               modifier = Modifier.fillMaxSize()
             )
           }
@@ -498,6 +555,7 @@ fun ExportAccountsScreen(
               exportQrBitmap?.recycle()
             } catch (_: Throwable) {}
             exportQrBitmap = null
+            transferPin = ""
             Toast.makeText(context, "Export complete", Toast.LENGTH_SHORT).show()
             onNavigateBack()
           },

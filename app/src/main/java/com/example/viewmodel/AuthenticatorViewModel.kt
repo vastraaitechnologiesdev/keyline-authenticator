@@ -282,8 +282,21 @@ class AuthenticatorViewModel @JvmOverloads constructor(
     return Result.success(payload)
   }
 
-  fun importPayload(rawPayload: String): Result<Pair<Int, Int>> {
-    val parseResult = TransferPayloadHelper.deserialize(rawPayload)
+  fun exportSelectedAccountsEncrypted(selectedIds: Set<String>, pin: String): Result<String> {
+    val accountsToExport = _rawAccounts.value.filter { selectedIds.contains(it.id) }
+    if (accountsToExport.isEmpty()) {
+      return Result.failure(IllegalArgumentException("No accounts selected for export"))
+    }
+    return try {
+      val payload = TransferPayloadHelper.serializeAndEncrypt(accountsToExport, pin)
+      Result.success(payload)
+    } catch (e: Exception) {
+      Result.failure(e)
+    }
+  }
+
+  fun importPayload(rawPayload: String, pin: String? = null): Result<Pair<Int, Int>> {
+    val parseResult = TransferPayloadHelper.deserialize(rawPayload, pin)
     if (parseResult.isFailure) {
       return Result.failure(parseResult.exceptionOrNull() ?: Exception("Failed to parse import QR"))
     }

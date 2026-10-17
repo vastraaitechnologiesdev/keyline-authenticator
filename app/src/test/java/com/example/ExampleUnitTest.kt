@@ -111,6 +111,55 @@ class ExampleUnitTest {
   }
 
   @Test
+  fun testEncryptedTransferPayloadWithPin() {
+    val sampleAccounts = listOf(
+      com.example.model.OtpAccount(
+        id = "id-1",
+        accountName = "alice@gmail.com",
+        issuer = "Google",
+        secretKey = "JBSWY3DPEHPK3PXP",
+        type = OtpType.TOTP,
+        algorithm = com.example.model.OtpAlgorithm.SHA1,
+        digits = 6,
+        period = 30
+      )
+    )
+
+    val pin = com.example.crypto.TransferPayloadHelper.generateTransferPin()
+    assertEquals(6, pin.length)
+    assertTrue(pin.all { it.isDigit() })
+
+    val encryptedPayload = com.example.crypto.TransferPayloadHelper.serializeAndEncrypt(sampleAccounts, pin)
+    assertTrue(com.example.crypto.TransferPayloadHelper.isTransferPayload(encryptedPayload))
+    assertTrue(com.example.crypto.TransferPayloadHelper.isEncrypted(encryptedPayload))
+
+    // Ensure zero plaintext secrets in the encrypted payload
+    org.junit.Assert.assertFalse(encryptedPayload.contains("alice@gmail.com"))
+    org.junit.Assert.assertFalse(encryptedPayload.contains("JBSWY3DPEHPK3PXP"))
+    org.junit.Assert.assertTrue(encryptedPayload.contains("ciphertext"))
+    org.junit.Assert.assertTrue(encryptedPayload.contains("salt"))
+    org.junit.Assert.assertTrue(encryptedPayload.contains("iv"))
+
+    // Deserializing without PIN fails
+    val failWithoutPin = com.example.crypto.TransferPayloadHelper.deserialize(encryptedPayload, pin = null)
+    assertTrue(failWithoutPin.isFailure)
+
+    // Decrypting with wrong PIN fails
+    val wrongPin = if (pin == "123456") "654321" else "123456"
+    val failWrongPin = com.example.crypto.TransferPayloadHelper.decryptAndDeserialize(encryptedPayload, wrongPin)
+    assertTrue(failWrongPin.isFailure)
+
+    // Decrypting with correct PIN succeeds
+    val successResult = com.example.crypto.TransferPayloadHelper.decryptAndDeserialize(encryptedPayload, pin)
+    assertTrue(successResult.isSuccess)
+    val decryptedAccounts = successResult.getOrThrow()
+    assertEquals(1, decryptedAccounts.size)
+    assertEquals("Google", decryptedAccounts[0].issuer)
+    assertEquals("alice@gmail.com", decryptedAccounts[0].accountName)
+    assertEquals("JBSWY3DPEHPK3PXP", decryptedAccounts[0].secretKey)
+  }
+
+  @Test
   fun testEncryptedBackupAndRestore() {
     val sampleAccounts = listOf(
       com.example.model.OtpAccount(
